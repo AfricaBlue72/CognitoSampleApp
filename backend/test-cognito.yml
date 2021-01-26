@@ -1,0 +1,263 @@
+﻿AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CloudFormation template to launch resources for a cognito identity pool
+
+Parameters:
+    Version: 
+        Type: String
+        Default: 0
+        
+    UserPoolName:
+        Description: The name of the userpool
+        Default: TestUserPool
+        Type: String
+        # AllowedPattern: [\w\s+=,.@-]+
+        MinLength: 1
+        MaxLength: 128
+        
+    IdentityPoolName:
+        Description: The name of the identity pool
+        Default: TestIdentityPool
+        Type: String
+        # AllowedPattern: [\w\s+=,.@-]+
+        MinLength: 1
+        MaxLength: 128
+        
+
+Resources:
+################################################################################
+## User pool
+################################################################################
+    TestQueue: 
+        Type: AWS::SQS::Queue
+        Properties: 
+            QueueName: TestQueue
+            
+################################################################################
+## User pool
+################################################################################
+    UserPoolRole:
+        Type: AWS::IAM::Role
+        Properties:
+            RoleName: TestUserPoolRole
+            AssumeRolePolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                -   Effect: Allow
+                    Principal:
+                        Service:
+                        -   cognito-idp.amazonaws.com
+                    Action:
+                    -   sts:AssumeRole
+            Path: "/"
+            Policies: 
+            -   PolicyName: root
+                PolicyDocument: 
+                    Version: 2012-10-17
+                    Statement: 
+                    - 
+                        Effect: Allow
+                        Action: 
+                        -   SNS:Publish
+                        -   SNS:SendSMSMessage
+                        Resource: "*"
+                        
+    UserPool:
+        Type: AWS::Cognito::UserPool
+        DependsOn: 
+        -   UserPoolRole
+        Properties: 
+            AdminCreateUserConfig: 
+                AllowAdminCreateUserOnly: True
+            UserPoolName: !Ref UserPoolName
+
+################################################################################
+## User Pool Groups
+################################################################################
+    TestUserPoolGroup:
+        Type: AWS::Cognito::UserPoolGroup
+        Properties: 
+            Description: Test group
+            GroupName: TestGroup
+            Precedence: 10
+            # RoleArn: String
+            UserPoolId: !Ref UserPool
+            
+    TestUserPoolGroup2:
+        Type: AWS::Cognito::UserPoolGroup
+        Properties: 
+            Description: Test group 2
+            GroupName: TestGroup2
+            Precedence: 10
+            # RoleArn: String
+            UserPoolId: !Ref UserPool
+            
+################################################################################
+## Userpool clients
+################################################################################
+    UserPoolTestClient: 
+        Type: AWS::Cognito::UserPoolClient
+        DependsOn: UserPool
+        Properties:
+            UserPoolId: !Ref UserPool
+            ExplicitAuthFlows: 
+            -   ALLOW_USER_SRP_AUTH
+            -   ALLOW_REFRESH_TOKEN_AUTH
+            ReadAttributes: 
+            -   email
+            RefreshTokenValidity: 30
+            ClientName: TestClient
+            GenerateSecret: False
+                        
+################################################################################
+## Identity pool
+################################################################################
+    IdentityPool:            
+        Type: AWS::Cognito::IdentityPool
+        DependsOn: 
+        -   UserPool
+        Properties: 
+            AllowClassicFlow: False
+            AllowUnauthenticatedIdentities: False
+            CognitoIdentityProviders: 
+            -     ClientId: !Ref UserPoolTestClient
+                  ProviderName: !GetAtt UserPool.ProviderName
+                  ServerSideTokenCheck: True
+            IdentityPoolName: !Ref IdentityPoolName
+
+################################################################################
+## Cognito identity roles
+################################################################################
+    UnAuthenticatedRole:  
+        Type: AWS::IAM::Role
+        Properties:
+            RoleName: UnAuthenticatedRoleForTestCognito
+            AssumeRolePolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                -   Effect: Allow
+                    Principal:
+                        Federated: cognito-identity.amazonaws.com
+                    Action:
+                    -   sts:AssumeRoleWithWebIdentity
+                    Condition:
+                        StringEquals:
+                            cognito-identity.amazonaws.com:aud: !Ref IdentityPool
+                        ForAnyValue:StringLike:
+                            cognito-identity.amazonaws.com:amr: unauthenticated
+            Path: /
+            Policies:
+            -   PolicyName: root
+                PolicyDocument:
+                    Version: 2012-10-17
+                    Statement:
+                    -   Effect: Allow
+                        Action:
+                        -   mobileanalytics:PutEvents
+                        -   cognito-sync:*
+                        Resource: '*'
+                        
+    AuthenticatedRole:  
+        Type: AWS::IAM::Role
+        Properties:
+            RoleName: AuthenticatedRoleForTestCognito
+            AssumeRolePolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                -   Effect: Allow
+                    Principal:
+                        Federated: cognito-identity.amazonaws.com
+                    Action:
+                    -   sts:AssumeRoleWithWebIdentity
+                    Condition:
+                        StringEquals:
+                            cognito-identity.amazonaws.com:aud: !Ref IdentityPool
+                        ForAnyValue:StringLike:
+                            cognito-identity.amazonaws.com:amr: authenticated
+            Path: /
+            ManagedPolicyArns:
+            -   arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+            Policies:
+            -   PolicyName: root
+                PolicyDocument:
+                    Version: 2012-10-17
+                    Statement:
+                    -   Effect: Allow
+                        Action:
+                        -   mobileanalytics:PutEvents
+                        -   cognito-sync:*
+                        Resource: '*'
+  
+    TestGroupRole:  
+        Type: AWS::IAM::Role
+        Properties:
+            RoleName: TestGroupRoleForTestCognito
+            AssumeRolePolicyDocument:
+                Version: 2012-10-17
+                Statement:
+                -   Effect: Allow
+                    Principal:
+                        Federated: cognito-identity.amazonaws.com
+                    Action:
+                    -   sts:AssumeRoleWithWebIdentity
+                    Condition:
+                        StringEquals:
+                            cognito-identity.amazonaws.com:aud: !Ref IdentityPool
+                        ForAnyValue:StringLike:
+                            cognito-identity.amazonaws.com:amr: authenticated
+            Path: /
+            ManagedPolicyArns:
+            -   arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+            Policies:
+            -   PolicyName: root
+                PolicyDocument:
+                    Version: 2012-10-17
+                    Statement:
+                    -   Effect: Allow
+                        Action:
+                        -   mobileanalytics:PutEvents
+                        -   cognito-sync:*
+                        Resource: '*'
+            -   PolicyName: TestListS3BucketPolicy
+                PolicyDocument:
+                    Version: 2012-10-17
+                    Statement:
+                    -   Effect: Allow
+                        Action:
+                        -   s3:List*
+                        Resource: '*'
+            -   PolicyName: TestQueuePolicy
+                PolicyDocument:
+                    Version: 2012-10-17
+                    Statement:
+                    -   Effect: Allow
+                        Action:
+                        -   sqs:SendMessage
+                        -   sqs:ReceiveMessage
+                        -   sqs:DeleteMessage
+                        Resource: '*'  
+################################################################################
+## Attach roles to the Identity Pool
+################################################################################
+    IdentityPoolRoleAttachment: 
+        Type: AWS::Cognito::IdentityPoolRoleAttachment 
+        Properties: 
+            IdentityPoolId: !Ref IdentityPool
+            Roles: 
+                authenticated: !GetAtt AuthenticatedRole.Arn 
+                unauthenticated: !GetAtt UnAuthenticatedRole.Arn 
+            RoleMappings:
+                 HcUserPool: 
+                    IdentityProvider: !Join [ "", ["cognito-idp.", !Sub "${AWS::Region}", ".amazonaws.com/", !Ref UserPool, ":", !Ref UserPoolTestClient] ]
+                    AmbiguousRoleResolution: Deny 
+                    Type: Rules 
+                    RulesConfiguration: 
+                        Rules: 
+                        # -   Claim: aud
+                        #     MatchType: Equals
+                        #     Value: !Ref UserPoolTestClient
+                        #     RoleARN: !GetAtt TestGroupRole.Arn 
+                        -   Claim: cognito:groups
+                            MatchType: Contains
+                            Value: !Ref TestUserPoolGroup
+                            RoleARN: !GetAtt TestGroupRole.Arn 
+                          

@@ -4,7 +4,7 @@
     {
         #region Provided by the AWS Admin
         
-        public const string UserName = "Toto";
+        public const string UserName = "";
         public const string Password = "";
 
         //Constants for obtaining tokens for API access.

@@ -25,7 +25,7 @@
             <RowDefinition />
         </Grid.RowDefinitions>
         <Label Grid.Column="0" Grid.Row="0" HorizontalAlignment="Left" VerticalAlignment="Center" Content="Login"/>
-        <TextBox Grid.Column="1" Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Center" Name="UserName" Height="23" TextWrapping="Wrap" Text="TestUser1" />
+        <TextBox Grid.Column="1" Grid.Row="0" HorizontalAlignment="Stretch" VerticalAlignment="Center" Name="UserName" Height="23" TextWrapping="Wrap"  />
         <Label Grid.Column="0" Grid.Row="1" HorizontalAlignment="Left" VerticalAlignment="Center" Content="Password"/>
         <PasswordBox Grid.Column="1" Grid.Row="1" HorizontalAlignment="Stretch" VerticalAlignment="Center" Name="Password" Height="23" PasswordChar="*"/>
         <Button Grid.Column="5" Grid.Row="0" HorizontalAlignment="Center" VerticalAlignment="Center" Content="Login" Click="Login_Click" Width="75"/>

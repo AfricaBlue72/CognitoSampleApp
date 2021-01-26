@@ -50,30 +50,6 @@ namespace CognitoSampleApp
     public partial class MainWindow : Window
     {
         private int messageCount = 0;
-       
-        private const string _password = "HollandCasino1!";
-        //Constants for obtaining tokens for API access.
-        private const string UserPoolId = "eu-west-1_3BWJOmtrV";        //Provided by the AWS Admin
-        private const string ClientId = "14uke6l2gv8cpkphg0jucmr3na";   //Provided by the AWS Admin
-
-        //Constants for direct AWS Services access
-        private const string IdentityPoolId = "eu-west-1:6a06788d-906c-45ae-9e54-e898d5337d95"; //Provided by the AWS Admin
-        private const string IdentityProviderName = "cognito-idp.eu-west-1.amazonaws.com/eu-west-1_3BWJOmtrV"; //Provided by the AWS Admin
-
-/*
-        private const string _password = "";
-        //Constants for obtaining tokens for API access.
-        private const string UserPoolId = "eu-west-1_ttGnwSBBf";        //Provided by the AWS Admin
-        //private const string ClientId = "1ail3lcjbj9kemc8dks7smbtv6";   //Provided by the AWS Admin
-        private const string ClientId = "6qno3sijkd1t9flcb32ejnu38k";
-        private const string ClientSecret = "1i42a13gbb8i5c2ts8rsa78f4k7u4c6bgrtv2r396m7is3cmfajs";
-
-        //Constants for direct AWS Services access
-        private const string IdentityPoolId = "eu-west-1:ed4d636d-5ac5-4b45-bb03-e34bb46c8180"; //Provided by the AWS Admin
-        private const string IdentityProviderName = "cognito-idp.eu-west-1.amazonaws.com/eu-west-1_ttGnwSBBf"; //Provided by the AWS Admin
- */
-        private const string QueueUrl = "https://sqs.eu-west-1.amazonaws.com/270577686952/TestQueue";
-
         private CognitoUser _cognitoUser = null;
 
         public CognitoUser User
@@ -104,11 +80,11 @@ namespace CognitoSampleApp
         public async Task<CognitoAWSCredentials> GetAuthenticatedCredentials()
         {
             CognitoAWSCredentials credentials = new CognitoAWSCredentials(
-                IdentityPoolId, // Identity pool ID
+                ConfigData.IdentityPoolId, // Identity pool ID
                 RegionEndpoint.EUWest1 // Region
             );
 
-            string idName = IdentityProviderName;
+            string idName = ConfigData.IdentityProviderName;
             string idToken = await GetIdToken();
             credentials.AddLogin(idName, idToken);
 
@@ -124,11 +100,12 @@ namespace CognitoSampleApp
             this.RefreshButton.IsEnabled = false;
             this.GetMessageButton.IsEnabled = false;
 
-            this.UserPool.Text = UserPoolId;
-            this.IdentityPool.Text = IdentityProviderName;
-            this.QueuUrlTextBox.Text = QueueUrl;
+            this.UserPool.Text = ConfigData.UserPoolId;
+            this.IdentityPool.Text = ConfigData.IdentityProviderName;
+            this.QueuUrlTextBox.Text = ConfigData.QueueUrl;
 
-            this.Password.Password = _password;
+            this.UserName.Text = ConfigData.UserName;
+            this.Password.Password = ConfigData.Password;
         }
 
         private async void Login_Click(object sender, RoutedEventArgs e)
@@ -205,8 +182,8 @@ namespace CognitoSampleApp
         {
             AuthFlowResponse authResponse = null;
             var provider = new AmazonCognitoIdentityProviderClient(new AnonymousAWSCredentials(), FallbackRegionFactory.GetRegionEndpoint());
-            var userPool = new CognitoUserPool(UserPoolId, ClientId, provider);
-            this.User = new CognitoUser(userName, ClientId, userPool, provider);
+            var userPool = new CognitoUserPool(ConfigData.UserPoolId, ConfigData.ClientId, provider);
+            this.User = new CognitoUser(userName, ConfigData.ClientId, userPool, provider);
 
             try
             {
@@ -220,7 +197,7 @@ namespace CognitoSampleApp
                     authResponse = await this.User.RespondToNewPasswordRequiredAsync(new RespondToNewPasswordRequiredRequest()
                     {
                         SessionID = authResponse.SessionID,
-                        NewPassword = "HollandCasino1!"
+                        NewPassword = ""
                     });
                 }
             }

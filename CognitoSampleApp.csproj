@@ -164,6 +164,8 @@
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
+    <None Include="backend\deploy-test-cognito.sh" />
+    <None Include="backend\test-cognito.yml" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

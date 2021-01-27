@@ -38,9 +38,8 @@ using System.Windows.Shapes;
 
 /*
  * AWSSDK.S3
+ * AWSSDK.SQS
  */
-
-//TODO: List S3 buckets - with test
 
 namespace CognitoSampleApp
 {
@@ -51,46 +50,6 @@ namespace CognitoSampleApp
     {
         private int messageCount = 0;
         private CognitoUser _cognitoUser = null;
-
-        public CognitoUser User
-        {
-            get { return _cognitoUser; }
-            set { _cognitoUser = value;  }
-        }
-
-        public async Task<string> GetIdToken()
-        {
-            if(User != null && User.SessionTokens != null && User.SessionTokens.IsValid() == false)
-            {
-                await GetCredsFromRefreshAsync(User.Username, User.SessionTokens.RefreshToken);
-            }
-            return User.SessionTokens.IdToken;
-        }
-
-        public async Task<string> GetAccessToken()
-        {
-            if (User != null && User.SessionTokens != null && User.SessionTokens.IsValid() == false)
-            {
-                await GetCredsFromRefreshAsync(User.Username, User.SessionTokens.RefreshToken);
-            }
-            return User.SessionTokens.AccessToken;
-        }
-
-        //Get AWS Credentials from the Id Token
-        public async Task<CognitoAWSCredentials> GetAuthenticatedCredentials()
-        {
-            CognitoAWSCredentials credentials = new CognitoAWSCredentials(
-                ConfigData.IdentityPoolId, // Identity pool ID
-                RegionEndpoint.EUWest1 // Region
-            );
-
-            string idName = ConfigData.IdentityProviderName;
-            string idToken = await GetIdToken();
-            credentials.AddLogin(idName, idToken);
-
-            return credentials;
-        }
-
         public MainWindow()
         {
             InitializeComponent();
@@ -106,6 +65,53 @@ namespace CognitoSampleApp
 
             this.UserName.Text = ConfigData.UserName;
             this.Password.Password = ConfigData.Password;
+        }
+
+        public CognitoUser User
+        {
+            get { return _cognitoUser; }
+            set { _cognitoUser = value;  }
+        }
+        
+        //Get the OpenId token.
+        public async Task<string> GetIdToken()
+        {
+            if(User != null && User.SessionTokens != null && User.SessionTokens.IsValid() == false)
+            {
+                //Get new Open Id and Access token by using the Refresh token.
+                await RefreshTokens(User.Username, User.SessionTokens.RefreshToken);
+            }
+            return User.SessionTokens.IdToken;
+        }
+
+        //Get the Access token.
+        public async Task<string> GetAccessToken()
+        {
+            if (User != null && User.SessionTokens != null && User.SessionTokens.IsValid() == false)
+            {
+                //Get new Open Id and Access token by using the Refresh token.
+                await RefreshTokens(User.Username, User.SessionTokens.RefreshToken);
+            }
+            return User.SessionTokens.AccessToken;
+        }
+
+        //Get AWS Credentials from the Id Token.
+        //These credentials are used to gain direct access to AWS Services
+        public async Task<CognitoAWSCredentials> GetAuthenticatedCredentials()
+        {
+            CognitoAWSCredentials credentials = new CognitoAWSCredentials(
+                ConfigData.IdentityPoolId, // Identity pool ID
+                RegionEndpoint.EUWest1 // Region
+            );
+
+            //The Identity Provider in this case is the User Pool your user resides in.
+            string idName = ConfigData.IdentityProviderName;
+            //Get a valid OpenId token.
+            string idToken = await GetIdToken();
+            //Enrich the credential.
+            credentials.AddLogin(idName, idToken);
+
+            return credentials;
         }
 
         private async void Login_Click(object sender, RoutedEventArgs e)
@@ -140,7 +146,7 @@ namespace CognitoSampleApp
                 this.AccessTokenText.Text = string.Empty;
                 this.OpenIdTokenText.Text = string.Empty;
 
-                AuthFlowResponse authResponse = await GetCredsFromRefreshAsync(userName, refreshToken);
+                AuthFlowResponse authResponse = await RefreshTokens(userName, refreshToken);
 
                 if (authResponse != null && authResponse.AuthenticationResult != null &&
                     User != null && User.SessionTokens != null)
@@ -178,6 +184,8 @@ namespace CognitoSampleApp
             var credentials = await GetAuthenticatedCredentials();
             await GetMessage(credentials, RegionEndpoint.EUWest1);
         }
+
+        //Login
         private async Task<AuthFlowResponse> AuthenticateWithSrpAsync(string userName, string password)
         {
             AuthFlowResponse authResponse = null;
@@ -209,7 +217,7 @@ namespace CognitoSampleApp
             return authResponse;
         }
 
-        private async Task<AuthFlowResponse> GetCredsFromRefreshAsync(string userName, string refreshToken)
+        private async Task<AuthFlowResponse> RefreshTokens(string userName, string refreshToken)
         {
             AuthFlowResponse authResponse = null; 
 
